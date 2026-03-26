@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Rhythm Game - Face Linger Fix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap" rel="stylesheet">
+    <style>
+        :root { --neon-yellow: #fff200; }
+        body { background-color: #0a0a0c; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; gap: 10px; overflow: hidden; font-family: 'Inter', sans-serif; }
+
+        #game-window {
+            height: 90vh; aspect-ratio: 2 / 3; position: relative; border: 4px solid #fff; 
+            background: #000 url('https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/1.png') no-repeat center / cover;
+        }
+
+        #face-window {
+            width: 22vh; height: 22vh; border: 4px solid var(--neon-yellow); background-color: #222;
+            background-size: contain; background-position: center; background-repeat: no-repeat;
+            background-image: url('https://uploads.onecompiler.io/44btje9x4/44hezhrs7/4.png'); 
+            align-self: flex-start; margin-top: calc(5vh + 4px);
+            box-shadow: 0 0 15px rgba(255, 242, 0, 0.3);
+            transition: background-image 0.1s; /* 살짝 부드러운 전환 */
+        }
+
+        /* 콤보 및 기타 UI */
+        #combo-container { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 20; display: none; }
+        #combo-num { font-size: 70px; font-weight: 900; color: #fff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); display: block; }
+        #combo-text { font-size: 20px; font-weight: 900; color: var(--neon-yellow); letter-spacing: 5px; margin-top: -10px; }
+        .lane { position: absolute; width: 15%; height: 100%; background: rgba(255,255,255,0.05); z-index: 1; }
+        #lane-f { left: 34%; } #lane-j { left: 51%; }
+        #judge-line { position: absolute; bottom: 22%; left: 34%; width: 32%; height: 4px; background: white; z-index: 5; box-shadow: 0 0 15px #fff; }
+        .note { position: absolute; width: 15%; height: 2%; background: #fff; border-radius: 2px; z-index: 10; }
+        #score-board { position: absolute; top: 20px; left: 20px; font-size: 20px; font-weight: 900; color: white; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 4px; z-index: 11; }
+        #countdown-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: var(--neon-yellow); cursor: pointer; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div id="game-window">
+        <div id="combo-container">
+            <span id="combo-num">0</span>
+            <div id="combo-text">COMBO</div>
+        </div>
+        <div id="countdown-overlay">
+            <div id="main-text" style="font-size:55px; font-weight:900;">CLICK TO<br>START</div>
+            <div id="sub-text" style="font-size:18px; color:#fff; margin-top:10px;">READY?</div>
+        </div>
+        <div id="score-board">SCORE: 000000</div>
+        <div id="lane-f" class="lane"></div>
+        <div id="lane-j" class="lane"></div>
+        <div id="judge-line"></div>
+    </div>
+
+    <div id="face-window"></div>
+
+    <script>
+        const gameWin = document.getElementById('game-window');
+        const faceWin = document.getElementById('face-window');
+        const scoreBoard = document.getElementById('score-board');
+        const countdownEl = document.getElementById('countdown-overlay');
+        const comboContainer = document.getElementById('combo-container');
+        const comboNum = document.getElementById('combo-num');
+
+        const voiceHit = new Audio('battle_s3_11001_1_3.wav');
+        const voicePress = new Audio('battle_break_11001_1.wav');
+        const effectStrong = new Audio('쎄게.mp3');
+        const effectWeak = new Audio('약하게.mp3');
+
+        let score = 0, combo = 0, lastSpawn = 0;
+        let gameActive = false, isVoicePlaying = false;
+        let notes = [];
+        
+        let faceTimer = null; // 얼굴 유지를 위한 타이머 변수
+
+        const imgs = {
+            g1: "https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/1.png",
+            g2: "https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/2.png",
+            g3: "https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/3.png",
+            f4: "https://uploads.onecompiler.io/44btje9x4/44hezhrs7/4.png",
+            f5: "https://uploads.onecompiler.io/44btje9x4/44hezhrs7/5.png",
+            f6: "https://uploads.onecompiler.io/44hezqbwa/44hezr9fv/6.png"
+        };
+
+        function playVoice(audio) {
+            if (isVoicePlaying || Math.random() > 0.7) return;
+            isVoicePlaying = true;
+            audio.currentTime = 0;
+            audio.play().catch(() => { isVoicePlaying = false; });
+            audio.onended = () => { isVoicePlaying = false; };
+        }
+
+        function playEffect(audio) {
+            const clone = audio.cloneNode();
+            clone.volume = 0.5;
+            clone.play().catch(() => {});
+        }
+
+        function updateCombo(isReset) {
+            if (isReset) { combo = 0; comboContainer.style.display = 'none'; }
+            else {
+                combo++; comboNum.innerText = combo; comboContainer.style.display = 'block';
+                comboNum.classList.remove('combo-pop'); void comboNum.offsetWidth; comboNum.classList.add('combo-pop');
+            }
+        }
+
+        // 얼굴 이미지를 변경하고 일정 시간 뒤 복구하는 함수
+        function setFace(imgSrc, duration = 500) {
+            clearTimeout(faceTimer); // 기존 타이머 취소
+            faceWin.style.backgroundImage = `url('${imgSrc}')`;
+            
+            // duration(0.5초) 후에 기본 얼굴(f4)로 돌아감
+            faceTimer = setTimeout(() => {
+                faceWin.style.backgroundImage = `url('${imgs.f4}')`;
+            }, duration);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (!gameActive || e.repeat) return;
+            const key = e.key.toLowerCase();
+            if (key === 'f' || key === 'j') {
+                gameWin.style.backgroundImage = `url('${key === 'f' ? imgs.g2 : imgs.g3}')`;
+
+                if (checkHit(key)) {
+                    setFace(imgs.f6, 600); // 성공 시 6번 얼굴을 0.6초간 유지
+                    playVoice(voiceHit); 
+                    playEffect(effectStrong); 
+                    updateCombo(false);
+                } else {
+                    setFace(imgs.f5, 500); // 누를 시 5번 얼굴을 0.5초간 유지
+                    playVoice(voicePress); 
+                    playEffect(effectWeak);
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (key === 'f' || key === 'j') {
+                gameWin.style.backgroundImage = `url('${imgs.g1}')`;
+                // keyup 시점에 즉시 얼굴을 바꾸지 않음 (setTimeout이 해결해줌)
+            }
+        });
+
+        function startCountdown() {
+            let count = 3;
+            const mt = document.getElementById('main-text');
+            const st = document.getElementById('sub-text');
+            mt.innerText = count; st.innerText = "PRESS F & J";
+            const timer = setInterval(() => {
+                count--;
+                if (count > 0) mt.innerText = count;
+                else {
+                    clearInterval(timer); mt.innerText = "GO!";
+                    setTimeout(() => { countdownEl.style.display = 'none'; gameActive = true; requestAnimationFrame(update); }, 500);
+                }
+            }, 1000);
+        }
+
+        countdownEl.addEventListener('click', () => { if(gameActive) return; startCountdown(); });
+
+        function spawnNote() {
+            const lane = Math.random() > 0.5 ? 'f' : 'j';
+            const el = document.createElement('div');
+            el.className = 'note'; el.style.left = (lane === 'f' ? 34 : 51) + '%'; el.style.top = '-5%';
+            gameWin.appendChild(el); notes.push({ el, y: -5, lane, removed: false });
+        }
+
+        function checkHit(lane) {
+            let isHit = false;
+            for (let n of notes) {
+                if (!n.removed && n.lane === lane) {
+                    if (n.y > 75 && n.y < 85) {
+                        score += 100; scoreBoard.innerText = "SCORE: " + String(score).padStart(6, '0');
+                        n.el.remove(); n.removed = true; isHit = true; break;
+                    }
+                }
+            }
+            return isHit;
+        }
+
+        function update(time) {
+            if (!gameActive) return;
+            if (time - lastSpawn > 850) { spawnNote(); lastSpawn = time; }
+            for (let i = notes.length - 1; i >= 0; i--) {
+                const n = notes[i];
+                if (n.removed) { notes.splice(i, 1); continue; }
+                n.y += 1.4; n.el.style.top = n.y + '%';
+                if (n.y > 100) { n.el.remove(); notes.splice(i, 1); updateCombo(true); }
+            }
+            requestAnimationFrame(update);
+        }
+    </script>
+</body>
+</html>
