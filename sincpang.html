@@ -81,6 +81,11 @@
             f6: "https://uploads.onecompiler.io/44hezqbwa/44hezr9fv/6.png"
         };
 
+	Object.values(imgs).forEach(src => {
+            const preloadImg = new Image();
+            preloadImg.src = src;
+        });
+
         function playVoice(audio) {
             if (isVoicePlaying || Math.random() > 0.7) return;
             isVoicePlaying = true;
