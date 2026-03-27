@@ -2,62 +2,24 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Rhythm Game - Sharp Combo</title>
+    <title>My Rhythm Game - Perfect Sync</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;900&display=swap" rel="stylesheet">
     <style>
-        :root { --neon-yellow: rgba(255, 242, 0, 0.8); --neon-red: rgba(255, 77, 77, 0.8); }
+        :root { --neon-yellow: #fff200; --neon-red: #ff4d4d; }
         body { background-color: #0a0a0c; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; gap: 10px; overflow: hidden; font-family: 'Inter', sans-serif; }
-
-        #game-window {
-            height: 90vh; aspect-ratio: 2 / 3; position: relative; border: 4px solid #fff; 
-            background: #000 url('https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/1.png') no-repeat center / cover;
-        }
-
-        #face-window {
-            width: 22vh; height: 22vh; border: 4px solid #fff200; background-color: #222;
-            background-size: contain; background-position: center; background-repeat: no-repeat;
-            background-image: url('https://uploads.onecompiler.io/44btje9x4/44hezhrs7/4.png'); 
-            align-self: flex-start; margin-top: calc(5vh + 4px);
-            box-shadow: 0 0 15px rgba(255, 242, 0, 0.3);
-            transition: background-image 0.1s;
-            transform-origin: center;
-        }
-
-        /* 캐릭터 보잉보잉 */
+        #game-window { height: 90vh; aspect-ratio: 2 / 3; position: relative; border: 4px solid #fff; background: #000 url('https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/1.png') no-repeat center / cover; }
+        #face-window { width: 22vh; height: 22vh; border: 4px solid #fff200; background-color: #222; background-size: contain; background-position: center; background-repeat: no-repeat; background-image: url('https://uploads.onecompiler.io/44btje9x4/44hezhrs7/4.png'); align-self: flex-start; margin-top: calc(5vh + 4px); box-shadow: 0 0 15px rgba(255, 242, 0, 0.3); transition: background-image 0.1s; transform-origin: center; }
         .boing { animation: boing-effect 0.1s ease-out; }
-        @keyframes boing-effect {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        /* [추가] 콤보 바운스 애니메이션 */
+        @keyframes boing-effect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
         .combo-pop { animation: combo-pop-effect 0.1s ease-out; }
-        @keyframes combo-pop-effect {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.15); }
-            100% { transform: scale(1); }
-        }
-
-        .judge-text {
-            position: absolute; left: 50%; bottom: 32%; transform: translateX(-50%);
-            font-size: 24px; font-weight: 900; pointer-events: none; z-index: 30;
-            letter-spacing: 2px;
-            animation: moveUpFade 0.5s ease-out forwards;
-        }
-        @keyframes moveUpFade {
-            0% { transform: translate(-50%, 0); opacity: 0.7; }
-            100% { transform: translate(-50%, -20px); opacity: 0; }
-        }
-
-        /* [수정] 콤보 UI: 두께는 500(얇게), 색상은 선명한 흰색(1.0) */
+        @keyframes combo-pop-effect { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        .judge-text { position: absolute; left: 50%; bottom: 32%; transform: translateX(-50%); font-size: 28px; font-weight: 900; pointer-events: none; z-index: 30; letter-spacing: 2px; animation: moveUpFade 0.5s ease-out forwards; text-shadow: 0 0 10px rgba(255,255,255,0.8); }
+        @keyframes moveUpFade { 0% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, -30px); opacity: 0; } }
+        .particle { position: absolute; border-radius: 2px; pointer-events: none; z-index: 100; animation: explode 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+        @keyframes explode { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0) rotate(180deg); opacity: 0; } }
         #combo-container { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 20; display: none; }
-        #combo-num { 
-            font-size: 85px; font-weight: 500; color: #ffffff; display: block; 
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* 은은한 광택 */
-        }
+        #combo-num { font-size: 85px; font-weight: 500; color: #ffffff; display: block; text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
         #combo-text { font-size: 18px; font-weight: 500; color: #fff200; letter-spacing: 8px; margin-top: -10px; }
-        
         .lane { position: absolute; width: 15%; height: 100%; background: rgba(255,255,255,0.05); z-index: 1; }
         #lane-f { left: 34%; } #lane-j { left: 51%; }
         #judge-line { position: absolute; bottom: 22%; left: 34%; width: 32%; height: 4px; background: white; z-index: 5; box-shadow: 0 0 15px #fff; }
@@ -67,173 +29,98 @@
     </style>
 </head>
 <body>
-
     <div id="game-window">
-        <div id="combo-container">
-            <span id="combo-num">0</span>
-            <div id="combo-text">COMBO</div>
-        </div>
-        <div id="countdown-overlay" onclick="startCountdown()">
-            <div id="main-text" style="font-size:55px; font-weight:900;">CLICK TO<br>START</div>
-            <div id="sub-text" style="font-size:18px; color:#fff; margin-top:10px;">READY?</div>
-        </div>
+        <div id="combo-container"><span id="combo-num">0</span><div id="combo-text">COMBO</div></div>
+        <div id="countdown-overlay" onclick="startCountdown()"><div id="main-text" style="font-size:55px; font-weight:900;">CLICK TO START</div><div id="sub-text" style="font-size:18px; color:#fff; margin-top:10px;">READY?</div></div>
         <div id="score-board">SCORE: 000000</div>
-        <div id="lane-f" class="lane"></div>
-        <div id="lane-j" class="lane"></div>
-        <div id="judge-line"></div>
+        <div id="lane-f" class="lane"></div><div id="lane-j" class="lane"></div><div id="judge-line"></div>
     </div>
-
     <div id="face-window"></div>
-
     <script>
-        const gameWin = document.getElementById('game-window');
-        const faceWin = document.getElementById('face-window');
-        const scoreBoard = document.getElementById('score-board');
-        const countdownEl = document.getElementById('countdown-overlay');
-        const comboContainer = document.getElementById('combo-container');
-        const comboNum = document.getElementById('combo-num');
-
+        const gameWin = document.getElementById('game-window'), faceWin = document.getElementById('face-window'), scoreBoard = document.getElementById('score-board'), countdownEl = document.getElementById('countdown-overlay'), comboContainer = document.getElementById('combo-container'), comboNum = document.getElementById('combo-num');
+        
         const voiceHit = new Audio('battle_s3_11001_1_3.wav');
         const voicePress = new Audio('battle_break_11001_1.wav');
-        const effectStrong = new Audio('쎄게.mp3');
-        const effectWeak = new Audio('약하게.mp3');
+        let isVoicePlaying = false; 
 
-        let score = 0, combo = 0, lastSpawn = 0;
-        let gameActive = false, isCounting = false;
-        let notes = [];
-        let faceTimer = null;
+        // 목소리 지연 시간을 120ms로 상향 조정
+        function playVoiceLocked(audioObj) {
+            if (isVoicePlaying) return; 
+            isVoicePlaying = true;
+            
+            setTimeout(() => {
+                audioObj.currentTime = 0;
+                audioObj.play().catch(()=>{ isVoicePlaying = false; });
+                audioObj.onended = () => {
+                    setTimeout(() => { isVoicePlaying = false; }, 200); 
+                };
+            }, 120); // 0.12초 지연 (타격음 싱크용)
+        }
 
-        const imgs = {
-            g1: "https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/1.png",
-            g2: "https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/2.png",
-            g3: "https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/3.png",
-            f4: "https://uploads.onecompiler.io/44btje9x4/44hezhrs7/4.png",
-            f5: "https://uploads.onecompiler.io/44btje9x4/44hezhrs7/5.png",
-            f6: "https://uploads.onecompiler.io/44hezqbwa/44hezr9fv/6.png"
+        function playHitEffect(file) {
+            const effect = new Audio(file);
+            effect.play().catch(()=>{});
+        }
+
+        const imgs = { 
+            g1: "https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/1.png", 
+            g2: "https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/2.png", 
+            g3: "https://uploads.onecompiler.io/44btje9x4/44hdnqzbb/3.png", 
+            f4: "https://uploads.onecompiler.io/44btje9x4/44hezhrs7/4.png", 
+            f5: "https://uploads.onecompiler.io/44btje9x4/44hezhrs7/5.png", 
+            f6: "https://uploads.onecompiler.io/44hezqbwa/44hj5vd3k/6.png" 
         };
-
         Object.values(imgs).forEach(src => { const img = new Image(); img.src = src; });
 
-        function showJudge(type) {
-            const txt = document.createElement('div');
-            txt.className = 'judge-text';
-            txt.innerText = type;
-            txt.style.color = type === 'PERFECT' ? 'var(--neon-yellow)' : 'var(--neon-red)';
-            gameWin.appendChild(txt);
-            setTimeout(() => txt.remove(), 500);
-        }
+        let score = 0, combo = 0, lastSpawn = 0, gameActive = false, isCounting = false, notes = [], faceTimer = null;
 
-        function triggerBoing() {
-            faceWin.classList.remove('boing');
-            void faceWin.offsetWidth;
-            faceWin.classList.add('boing');
-        }
-
-        // [추가] 콤보 바운스 함수
-        function triggerComboPop() {
-            comboNum.classList.remove('combo-pop');
-            void comboNum.offsetWidth;
-            comboNum.classList.add('combo-pop');
-        }
-
-        function updateCombo(isReset) {
-            if (isReset) { 
-                if (combo > 0) showJudge('MISS');
-                combo = 0; comboContainer.style.display = 'none'; 
-            } else {
-                combo++; 
-                comboNum.innerText = combo; 
-                comboContainer.style.display = 'block';
-                triggerComboPop(); // 콤보 오를 때마다 튕기기
-                showJudge('PERFECT');
+        function createParticles(lane) {
+            const laneX = (lane === 'f' ? 34 : 51) + (15 / 2);
+            const judgeY = 78;
+            for (let i = 0; i < 15; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = laneX + '%'; p.style.top = judgeY + '%';
+                const tx = (Math.random() - 0.5) * 150 + 'px', ty = (Math.random() - 0.7) * 150 + 'px', size = (Math.random() * 6 + 4) + 'px';
+                p.style.width = size; p.style.height = size;
+                p.style.backgroundColor = Math.random() > 0.5 ? '#fff200' : '#ffffff';
+                p.style.boxShadow = `0 0 10px ${p.style.backgroundColor}`;
+                p.style.setProperty('--tx', tx); p.style.setProperty('--ty', ty);
+                gameWin.appendChild(p);
+                p.addEventListener('animationend', () => p.remove());
             }
         }
 
-        function setFace(imgSrc, duration = 500) {
-            clearTimeout(faceTimer);
-            faceWin.style.backgroundImage = `url('${imgSrc}')`;
-            faceTimer = setTimeout(() => { faceWin.style.backgroundImage = `url('${imgs.f4}')`; }, duration);
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (!gameActive || e.repeat) return;
-            const key = e.key.toLowerCase();
-            if (key === 'f' || key === 'j') {
-                triggerBoing();
-                gameWin.style.backgroundImage = `url('${key === 'f' ? imgs.g2 : imgs.g3}')`;
-                
-                if (checkHit(key)) {
+        function showJudge(type) { const txt = document.createElement('div'); txt.className = 'judge-text'; txt.innerText = type; txt.style.color = type === 'PERFECT' ? 'var(--neon-yellow)' : 'var(--neon-red)'; gameWin.appendChild(txt); setTimeout(() => txt.remove(), 500); }
+        function triggerBoing() { faceWin.classList.remove('boing'); void faceWin.offsetWidth; faceWin.classList.add('boing'); }
+        function triggerComboPop() { comboNum.classList.remove('combo-pop'); void comboNum.offsetWidth; comboNum.classList.add('combo-pop'); }
+        function updateCombo(isReset) { if (isReset) { if (combo > 0) showJudge('MISS'); combo = 0; comboContainer.style.display = 'none'; } else { combo++; comboNum.innerText = combo; comboContainer.style.display = 'block'; triggerComboPop(); showJudge('PERFECT'); } }
+        function setFace(imgSrc, duration = 600) { clearTimeout(faceTimer); faceWin.style.backgroundImage = `url('${imgSrc}')`; faceTimer = setTimeout(() => { faceWin.style.backgroundImage = `url('${imgs.f4}')`; }, duration); }
+        
+        window.addEventListener('keydown', (e) => { 
+            if (!gameActive || e.repeat) return; 
+            const key = e.key.toLowerCase(); 
+            if (key === 'f' || key === 'j') { 
+                triggerBoing(); 
+                gameWin.style.backgroundImage = `url('${key === 'f' ? imgs.g2 : imgs.g3}')`; 
+                if (checkHit(key)) { 
                     setFace(imgs.f6, 600);
-                    voiceHit.currentTime = 0; voiceHit.play().catch(()=>{});
-                    effectStrong.currentTime = 0; effectStrong.play().catch(()=>{});
-                    updateCombo(false);
-                } else {
-                    setFace(imgs.f5, 500);
-                    voicePress.currentTime = 0; voicePress.play().catch(()=>{});
-                    effectWeak.currentTime = 0; effectWeak.play().catch(()=>{});
-                }
-            }
+                    playVoiceLocked(voiceHit); 
+                    playHitEffect('쎄게.mp3'); 
+                    updateCombo(false); createParticles(key); 
+                } else { 
+                    setFace(imgs.f5, 500); 
+                    playVoiceLocked(voicePress); 
+                    playHitEffect('약하게.mp3'); 
+                } 
+            } 
         });
 
-        window.addEventListener('keyup', (e) => {
-            const key = e.key.toLowerCase();
-            if (key === 'f' || key === 'j') gameWin.style.backgroundImage = `url('${imgs.g1}')`;
-        });
-
-        function startCountdown() {
-            if (isCounting || gameActive) return;
-            isCounting = true;
-            let count = 3;
-            const mt = document.getElementById('main-text');
-            mt.innerText = count;
-            const timer = setInterval(() => {
-                count--;
-                if (count > 0) mt.innerText = count;
-                else {
-                    clearInterval(timer);
-                    mt.innerText = "GO!";
-                    setTimeout(() => {
-                        countdownEl.style.display = 'none';
-                        gameActive = true;
-                        isCounting = false;
-                        requestAnimationFrame(update);
-                    }, 500);
-                }
-            }, 1000);
-        }
-
-        function spawnNote() {
-            const lane = Math.random() > 0.5 ? 'f' : 'j';
-            const el = document.createElement('div');
-            el.className = 'note'; el.style.left = (lane === 'f' ? 34 : 51) + '%'; el.style.top = '-5%';
-            gameWin.appendChild(el);
-            notes.push({ el, y: -5, lane, removed: false });
-        }
-
-        function checkHit(lane) {
-            let isHit = false;
-            for (let n of notes) {
-                if (!n.removed && n.lane === lane) {
-                    if (n.y > 72 && n.y < 88) {
-                        score += 100; scoreBoard.innerText = "SCORE: " + String(score).padStart(6, '0');
-                        n.el.remove(); n.removed = true; isHit = true; break;
-                    }
-                }
-            }
-            return isHit;
-        }
-
-        function update(time) {
-            if (!gameActive) return;
-            if (time - lastSpawn > 850) { spawnNote(); lastSpawn = time; }
-            for (let i = notes.length - 1; i >= 0; i--) {
-                const n = notes[i];
-                if (n.removed) { notes.splice(i, 1); continue; }
-                n.y += 1.4; n.el.style.top = n.y + '%';
-                if (n.y > 100) { n.el.remove(); notes.splice(i, 1); updateCombo(true); }
-            }
-            requestAnimationFrame(update);
-        }
+        window.addEventListener('keyup', (e) => { const key = e.key.toLowerCase(); if (key === 'f' || key === 'j') gameWin.style.backgroundImage = `url('${imgs.g1}')`; });
+        function startCountdown() { if (isCounting || gameActive) return; isCounting = true; let count = 3; const mt = document.getElementById('main-text'); mt.innerText = count; const timer = setInterval(() => { count--; if (count > 0) mt.innerText = count; else { clearInterval(timer); mt.innerText = "GO!"; setTimeout(() => { countdownEl.style.display = 'none'; gameActive = true; isCounting = false; requestAnimationFrame(update); }, 500); } }, 1000); }
+        function spawnNote() { const lane = Math.random() > 0.5 ? 'f' : 'j'; const el = document.createElement('div'); el.className = 'note'; el.style.left = (lane === 'f' ? 34 : 51) + '%'; el.style.top = '-5%'; gameWin.appendChild(el); notes.push({ el, y: -5, lane, removed: false }); }
+        function checkHit(lane) { let isHit = false; for (let n of notes) { if (!n.removed && n.lane === lane) { if (n.y > 70 && n.y < 86) { score += 100; scoreBoard.innerText = "SCORE: " + String(score).padStart(6, '0'); n.el.remove(); n.removed = true; isHit = true; break; } } } return isHit; }
+        function update(time) { if (!gameActive) return; if (time - lastSpawn > 850) { spawnNote(); lastSpawn = time; } for (let i = notes.length - 1; i >= 0; i--) { const n = notes[i]; if (n.removed) { notes.splice(i, 1); continue; } n.y += 1.4; n.el.style.top = n.y + '%'; if (n.y > 100) { n.el.remove(); notes.splice(i, 1); updateCombo(true); } } requestAnimationFrame(update); }
     </script>
 </body>
 </html>
